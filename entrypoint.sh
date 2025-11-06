@@ -118,9 +118,6 @@ cat << EOF > /singbox.json
     "auto_detect_interface": true,
     "rules": [
       {
-        "action": "sniff"
-      },
-      {
         "protocol": "dns",
         "action": "hijack-dns"
       }
@@ -135,73 +132,5 @@ cat << EOF > /singbox.json
 }
 EOF
 
-mergeconf() {
-	local logfile=$(mktemp)
-	sing-box merge singbox.json -D / -c /singbox.json -c "$1" --disable-color > ${logfile} 2>&1
-	if [ $? -ne 0 ]; then
-		cat ${logfile}
-		exit 1
-	fi
-	rm -f ${logfile} "$1"
-}
-
-add_rule() {
-	local IFS=,
-	local entries=""
-	local tmpfile=$(mktemp)
-	for e in $2; do entries="${entries}\"${e}\","; done
-	cat <<- EOF > ${tmpfile}
-		{
-		  "route": {
-		    "rules": [
-		      {
-		        "$1": [${entries%?}],
-		        "action": "route",
-		        "outbound": "${out_rules}"
-		      }
-		    ]
-		  }
-		}
-	EOF
-	mergeconf ${tmpfile}
-}
-
-add_rulesets() {
-	local IFS=,
-	local entries=""
-	local tmpfile=$(mktemp)
-	local i=1
-	for url in $1; do
-		local tag="ruleset-${i}"
-		entries="${entries}${tag},"
-		local format
-		case "${url}" in
-		*.json) format=source ;;
-		*) format=binary ;;
-		esac
-		cat <<- EOF > ${tmpfile}
-			{
-			  "route": {
-			    "rule_set": [
-			      {
-			        "tag": "${tag}",
-			        "type": "remote",
-			        "format": "${format}",
-			        "url": "${url}",
-			        "download_detour": "vless-out",
-			        "update_interval": "2h"
-			      }
-			    ]
-			  }
-			}
-		EOF
-		mergeconf ${tmpfile}
-		i=$((i + 1))
-	done
-	add_rule rule_set "${entries%?}"
-}
-
-[ -n "${DOMAINS}" ] && add_rule domain_suffix ${DOMAINS}
-[ -n "${RULESETS}" ] && add_rulesets ${RULESETS}
 sing-box check -c /singbox.json --disable-color || exit 1
 exec runsv /service
