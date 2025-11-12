@@ -7,6 +7,5 @@ RUN apk add --no-cache ca-certificates-bundle
 FROM busybox:musl
 COPY --from=sing-box /usr/local/bin/sing-box /bin/sing-box \
      --from=certs /etc/ssl/certs /etc/ssl/certs
-COPY --chown=0:0 --chmod=755 entrypoint.sh /entrypoint.sh \
-     --chown=0:0 --chmod=755 service.sh /service/run
+COPY --chown=0:0 --chmod=755 entrypoint.sh service.sh /service/
 ENTRYPOINT ["/entrypoint.sh"]   
